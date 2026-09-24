@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="app-window-title">Canon MAXIFY GX6170 Print Manager</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        
+        .pulse-subtle {
+            animation: pulse-ring 2s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 99px;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Top Navigation Bar (HIDDEN in Customer Mode for Security) -->
+    <header id="admin-navbar" class="no-print bg-navy-900 text-white sticky top-0 z-40 shadow-xl border-b border-slate-800 hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- App Logo & Title -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('admin')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20 font-bold text-xl">
+                        <i class="fa-solid fa-print"></i>
+                    </div>
+                    <div>
+                        <span id="nav-header-title" class="font-extrabold text-lg tracking-tight block leading-tight">Canon MAXIFY GX6170 Portal</span>
+                        <span class="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Local PC Storage Active (IndexedDB)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Admin Mode Switcher Tabs -->
+                <nav class="flex items-center space-x-1 bg-slate-800/80 p-1 rounded-2xl border border-slate-700/60 text-xs font-semibold backdrop-blur-md">
+                    <button onclick="switchView('admin')" id="tab-admin" class="nav-tab px-3.5 py-2 rounded-xl transition-all text-slate-300 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-brand-400"></i> Queue Manager
+                        <span id="pending-count-badge" class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                    </button>
+                    <button onclick="switchView('analytics')" id="tab-analytics" class="nav-tab px-3.5 py-2 rounded-xl transition-all text-slate-300 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-blue-400"></i> Analytics
+                    </button>
+                    <button onclick="switchView('pc-bridge')" id="tab-pc-bridge" class="nav-tab px-3.5 py-2 rounded-xl transition-all text-slate-300 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-desktop text-purple-400"></i> Local PC Folder & Agent
+                    </button>
+                    <button onclick="switchView('settings')" id="tab-settings" class="nav-tab px-3.5 py-2 rounded-xl transition-all text-slate-300 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-amber-400"></i> Portal Customization & Setup
+                    </button>
+                    <button onclick="switchView('customer')" class="px-3.5 py-2 rounded-xl transition-all text-amber-300 hover:bg-slate-700/80 flex items-center gap-1.5 ml-2 border border-slate-700">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Exit Admin
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Application Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Network Access Warning Banner (Admin view only) -->
+        <div id="file-protocol-warning" class="hidden mb-4 bg-amber-500 text-slate-950 border border-amber-600 rounded-2xl p-4 text-xs font-semibold shadow-md flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-network-wired text-2xl"></i>
+                <div>
+                    <p class="font-extrabold text-sm">Notice: App opened as local file (<code class="bg-amber-400/60 px-1 py-0.5 rounded">file://</code>)</p>
+                    <p class="text-slate-900 mt-0.5">Your PC has Ethernet Internet. To let phones connect, use free Netlify/GitHub Pages, or run ngrok / Python on PC.</p>
+                </div>
+            </div>
+            <button onclick="switchView('settings')" class="bg-slate-950 text-white hover:bg-slate-800 text-xs font-bold px-3 py-2 rounded-xl transition whitespace-nowrap ml-4">
+                <i class="fa-solid fa-ethernet mr-1"></i> Setup Mobile Link
+            </button>
+        </div>
+
+        <!-- Optional Technical Storage Banner (Controlled by Admin in Settings) -->
+        <div id="customer-storage-banner" class="hidden mb-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-900 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2.5">
+                <i class="fa-solid fa-shield-halved text-emerald-600 text-base"></i>
+                <span><strong>Secure Local Processing:</strong> Your files are processed safely and stored locally on the office system.</span>
+            </div>
+            <span class="bg-emerald-200/80 text-emerald-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0 hidden sm:inline-block">Private Storage</span>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: CUSTOMER UPLOAD PORTAL             -->
+        <!-- ========================================== -->
+        <section id="view-customer" class="max-w-2xl mx-auto space-y-6">
+            
+            <!-- Dedicated Customer Header -->
+            <div class="text-center space-y-2 mb-2">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-red-600 to-rose-700 text-white rounded-2xl shadow-xl shadow-red-500/20 mb-1">
+                    <i class="fa-solid fa-print text-2xl"></i>
+                </div>
+                <h1 id="lbl-portal-title" class="text-3xl font-black text-slate-900 tracking-tight">Canon MAXIFY GX6170 Print Portal</h1>
+                <p id="lbl-portal-subtitle" class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">Submit your documents for printing seamlessly.</p>
+                
+                <div id="badge-office-status-container" class="inline-flex items-center gap-2 text-[11px] bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full font-bold">
+                    <i class="fa-solid fa-usb"></i> <span id="lbl-office-badge">Office Connected: Canon MAXIFY GX6170</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
+                <form id="customer-upload-form" onsubmit="handleCustomerSubmit(event)" class="p-6 sm:p-8 space-y-6">
+                    
+                    <!-- Customer Information Inputs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        
+                        <!-- Name Field -->
+                        <div id="field-group-name">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                <span id="lbl-cust-name-heading">Customer / User Name</span> <span id="req-star-name" class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-user-tag absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                <input type="text" id="cust-name" placeholder="e.g. Rahul Sharma" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white transition outline-none font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Department Field -->
+                        <div id="field-group-dept">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                <span id="lbl-cust-dept-heading">Department</span> <span id="req-star-dept" class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-building absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                                <select id="cust-department" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white transition outline-none font-medium">
+                                    <option value="General">General / Walk-in</option>
+                                    <option value="Accounts">Accounts & Finance</option>
+                                    <option value="HR & Admin">HR & Admin</option>
+                                    <option value="Sales & Marketing">Sales & Marketing</option>
+                                    <option value="Operations">Operations & Legal</option>
+                                    <option value="IT & Support">IT & Support</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact / Phone Field -->
+                    <div id="field-group-contact">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            <span id="lbl-cust-contact-heading">Mobile Number / Reference ID</span> <span id="req-star-contact" class="text-red-500 hidden">*</span>
+                        </label>
+                        <div class="relative">
+                            <i class="fa-solid fa-phone absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                            <input type="text" id="cust-phone" placeholder="e.g. +91 98765 43210 / EMP-101" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:bg-white transition outline-none font-medium">
+                        </div>
+                    </div>
+
+                    <!-- File Dropzone -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Select Document to Print <span class="text-red-500">*</span></label>
+                        <div id="file-dropzone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50/80 hover:bg-emerald-50/30 rounded-2xl p-6 text-center cursor-pointer transition group">
+                            <input type="file" id="file-input" required class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onchange="handleFileSelected(event)">
+                            <div id="dropzone-prompt" class="space-y-2">
+                                <div class="w-12 h-12 bg-emerald-100 text-brand-600 rounded-2xl flex items-center justify-center mx-auto transition group-hover:scale-110">
+                                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700">Click or drag file here to upload</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">PDF, Word, Excel, PowerPoint or Images</p>
+                                </div>
+                            </div>
+
+                            <div id="dropzone-selected" class="hidden flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                                <div class="flex items-center space-x-3 overflow-hidden">
+                                    <div id="file-thumbnail-preview" class="w-12 h-12 bg-slate-100 text-brand-700 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-slate-200">
+                                        <i class="fa-solid fa-file-lines text-xl text-brand-600"></i>
+                                    </div>
+                                    <div class="text-left truncate">
+                                        <p id="file-name" class="text-sm font-bold text-slate-800 truncate">document.pdf</p>
+                                        <p id="file-meta" class="text-xs text-slate-400">Calculating page count...</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="event.stopPropagation(); resetSelectedFile();" class="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-slate-100 transition">
+                                    <i class="fa-solid fa-xmark text-base"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Print Settings Section -->
+                    <div class="bg-slate-50/80 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-red-600"></i> Print Options
+                            </h3>
+                            <span class="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded">Canon GX6170</span>
+                        </div>
+
+                        <!-- Copies & Color Mode -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Number of Copies</label>
+                                <div class="flex items-center bg-white border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+                                    <button type="button" onclick="adjustCopies(-1)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 text-sm transition">-</button>
+                                    <input type="number" id="print-copies" value="1" min="1" max="100" class="w-full text-center text-sm font-bold border-none focus:ring-0 py-1.5" onchange="calculateEstimatedCost()">
+                                    <button type="button" onclick="adjustCopies(1)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 text-sm transition">+</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Color Mode</label>
+                                <select id="print-color" onchange="calculateEstimatedCost()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-brand-500 outline-none shadow-sm">
+                                    <option value="bw">Black & White (B&W)</option>
+                                    <option value="color">Full Color</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Page Range & Duplex -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="field-group-pagerange">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Page Range</label>
+                                <input type="text" id="print-page-range" placeholder="All (or e.g. 1-3, 5)" onchange="calculateEstimatedCost()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-brand-500 outline-none shadow-sm">
+                            </div>
+
+                            <div id="field-group-duplex">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Layout Mode</label>
+                                <select id="print-duplex" onchange="calculateEstimatedCost()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-brand-500 outline-none shadow-sm">
+                                    <option value="double">Double-Sided (Duplex)</option>
+                                    <option value="single">Single-Sided</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Paper Size & Orientation -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Paper Size</label>
+                                <select id="print-paper" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold outline-none shadow-sm">
+                                    <option value="A4">A4 Standard</option>
+                                    <option value="Letter">Letter</option>
+                                    <option value="Legal">Legal</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Orientation</label>
+                                <select id="print-orientation" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold outline-none shadow-sm">
+                                    <option value="portrait">Portrait</option>
+                                    <option value="landscape">Landscape</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Special Instructions -->
+                        <div id="field-group-notes">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                <span id="lbl-cust-notes-heading">Special Instructions / Notes</span> <span id="req-star-notes" class="text-red-500 hidden">*</span>
+                            </label>
+                            <input type="text" id="print-notes" placeholder="e.g. Urgently needed / Collect at desk" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium outline-none shadow-sm">
+                        </div>
+                    </div>
+
+                    <!-- Payment / Price Box -->
+                    <div id="price-summary-box" class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-emerald-900 font-bold">Estimated Printing Charge</p>
+                            <p class="text-xs text-emerald-700" id="cost-breakdown-text">1 page x 1 copy</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-black text-emerald-800" id="estimated-price-display">₹2.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 active:scale-[0.99] text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg shadow-red-500/25 flex items-center justify-center space-x-2 transition">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span id="lbl-submit-btn">Send to Print Queue</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Customer Success Confirmation -->
+            <div id="customer-success-card" class="hidden bg-white rounded-3xl p-8 shadow-xl text-center space-y-5 border border-emerald-200">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl pulse-subtle">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h2 id="lbl-success-title" class="text-2xl font-black text-slate-900">Document Queued Successfully!</h2>
+                <p id="lbl-success-desc" class="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">Your request has been submitted to the print manager desk.</p>
+                
+                <div class="bg-slate-100/80 p-5 rounded-2xl max-w-xs mx-auto border border-slate-200">
+                    <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Print Ticket Reference</span>
+                    <span id="customer-ref-code" class="text-3xl font-mono-code font-black text-red-600 tracking-wider">#OFF-0000</span>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="resetCustomerForm()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-sm transition shadow-md">
+                        <i class="fa-solid fa-plus-circle mr-1.5"></i> Submit Another Document
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Login Link -->
+            <div class="text-center pt-2">
+                <button onclick="promptAdminLogin()" class="text-slate-400 hover:text-slate-600 text-xs font-semibold transition flex items-center justify-center mx-auto gap-1.5 py-2 px-3 rounded-lg hover:bg-slate-200/50">
+                    <i class="fa-solid fa-lock text-[11px]"></i> Switch to Admin Console
+                </button>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: OWNER / ADMIN QUEUE MANAGER        -->
+        <!-- ========================================== -->
+        <section id="view-admin" class="hidden space-y-6">
+            
+            <!-- Top Dashboard Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-extrabold tracking-wider">Pending</p>
+                        <p id="stat-pending-count" class="text-2xl font-black text-slate-900">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-extrabold tracking-wider">Printed</p>
+                        <p id="stat-printed-count" class="text-2xl font-black text-slate-900">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-extrabold tracking-wider">Total Revenue</p>
+                        <p id="stat-revenue" class="text-2xl font-black text-slate-900">₹0.00</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-extrabold tracking-wider">PC Storage</p>
+                        <p id="printer-status-text" class="text-xs font-bold text-emerald-600 flex items-center gap-1.5 mt-1">
+                            <i class="fa-solid fa-database"></i> IndexedDB Local PC
+                        </p>
+                    </div>
+                    <button onclick="triggerDemoJob()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[10px]"></i> Demo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search & Actions Bar -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3 md:space-y-0 md:flex md:items-center md:justify-between">
+                
+                <div class="relative w-full md:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="queue-search-input" onkeyup="renderQueueCards()" placeholder="Search name, ref, file..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="flex items-center space-x-1 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+                    <button onclick="filterQueue('all')" id="filter-all" class="queue-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-sm whitespace-nowrap">All Jobs</button>
+                    <button onclick="filterQueue('pending')" id="filter-pending" class="queue-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">Pending</button>
+                    <button onclick="filterQueue('approved')" id="filter-approved" class="queue-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">Approved</button>
+                    <button onclick="filterQueue('completed')" id="filter-completed" class="queue-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">Printed</button>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="approveAllPending()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-check-double"></i> Approve All
+                    </button>
+                    <button onclick="clearCompletedJobs()" class="px-3 py-2 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-trash-can"></i> Clear Finished
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Print Job Cards Grid -->
+            <div id="queue-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Empty Queue Placeholder -->
+            <div id="empty-queue-msg" class="hidden bg-white rounded-3xl p-12 text-center border border-slate-200/80 space-y-3">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-inbox"></i>
+                </div>
+                <h3 class="text-base font-extrabold text-slate-800">No Documents in Queue</h3>
+                <p class="text-xs text-slate-400 max-w-sm mx-auto">When customers submit documents via the portal or QR code, they are saved locally on this PC and will appear here.</p>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: ANALYTICS & REVENUE                -->
+        <!-- ========================================== -->
+        <section id="view-analytics" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Printing Analytics & Collections (₹ INR)</h2>
+                            <p class="text-xs text-slate-400">Track volume, department stats, and billing breakdown</p>
+                        </div>
+                    </div>
+                    <button onclick="exportAuditLogCSV()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-csv text-emerald-400"></i> Export Audit CSV
+                    </button>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Pages Printed by Department</h3>
+                    <div id="analytics-dept-bars" class="space-y-3">
+                        <!-- Dynamic department stats -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600">Color vs B&W Printing Ratio</h4>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-700">Monochrome (B&W)</span>
+                                    <span id="analytics-bw-val" class="text-slate-900 font-bold">0 pgs</span>
+                                </div>
+                                <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                                    <div id="analytics-bw-bar" class="bg-slate-800 h-full transition-all" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-700">Full Color</span>
+                                    <span id="analytics-color-val" class="text-slate-900 font-bold">0 pgs</span>
+                                </div>
+                                <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                                    <div id="analytics-color-bar" class="bg-gradient-to-r from-red-500 to-rose-500 h-full transition-all" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/80 space-y-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-indian-rupee-sign text-emerald-600"></i> Financial Summary
+                        </h4>
+                        <div class="pt-2 space-y-2">
+                            <div class="flex justify-between text-xs font-semibold text-emerald-800">
+                                <span>B&W Collections:</span>
+                                <span id="analytics-bw-rev" class="font-bold">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between text-xs font-semibold text-emerald-800">
+                                <span>Color Collections:</span>
+                                <span id="analytics-color-rev" class="font-bold">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between text-sm font-black text-emerald-950 border-t border-emerald-200/80 pt-2">
+                                <span>Total Gross Revenue:</span>
+                                <span id="analytics-total-rev">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW 4: SILENT USB PC BACKGROUND AGENT     -->
+        <!-- ========================================== -->
+        <section id="view-pc-bridge" class="hidden max-w-3xl mx-auto space-y-6">
+            <div class="bg-navy-950 text-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border border-slate-800">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-red-500/20 text-red-400 rounded-2xl flex items-center justify-center text-2xl border border-red-500/30">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Local PC File Folder & USB Agent</h2>
+                            <p class="text-xs text-slate-400">All uploaded print files are automatically stored on your PC disk folder</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-emerald-950/80 border border-emerald-800/80 text-emerald-400 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm">
+                        <span class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
+                        <span>Folder Active</span>
+                    </div>
+                </div>
+
+                <!-- Explanation Box -->
+                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-hard-drive text-amber-400 text-lg mt-0.5"></i>
+                        <div class="space-y-1.5 text-xs text-slate-300">
+                            <p class="font-bold text-white text-sm">Where are files stored on your PC?</p>
+                            <p>• <strong>Browser Database (IndexedDB):</strong> Files are saved inside your local browser storage (supports large PDFs/images without cloud dependence).</p>
+                            <p>• <strong>PC Hard Drive Folder:</strong> When you download the local Python script below, all submitted files are automatically saved into a folder named <code class="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded">C:\Canon_Print_Spooler\</code> on your PC.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Python Agent Script Download -->
+                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-white uppercase tracking-wider">Local PC Folder Auto-Saver Agent</h3>
+                            <p class="text-[11px] text-slate-400">Downloads printable files directly to C:\Canon_Print_Spooler\ on PC</p>
+                        </div>
+                        <button onclick="downloadBackgroundScript()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i> Download Local PC Script (.py)
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Run this Python script on the PC connected to the Canon MAXIFY GX6170. It automatically creates the folder and saves every printable document onto your local hard drive.</p>
+                </div>
+
+                <!-- WebUSB Direct Browser Connection -->
+                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-white uppercase tracking-wider">WebUSB / Direct Browser Pairing</h3>
+                            <p class="text-[11px] text-slate-400">Pair browser directly with Canon MAXIFY USB controller</p>
+                        </div>
+                        <button onclick="connectWebUSBDevice()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-2">
+                            <i class="fa-solid fa-plug"></i> Pair Canon USB
+                        </button>
+                    </div>
+                    <div id="usb-device-info" class="text-xs font-mono-code bg-black p-3 rounded-xl text-slate-400 border border-slate-800">
+                        Status: IndexedDB Storage Active • Canon MAXIFY USB Ready
+                    </div>
+                </div>
+
+                <!-- Terminal Log Window -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">PC Storage Spooler Log</h3>
+                        <button onclick="clearTerminalLog()" class="text-[10px] text-slate-500 hover:text-slate-300 font-mono-code">Clear Log</button>
+                    </div>
+                    <div id="terminal-log" class="bg-black font-mono-code text-xs text-slate-300 p-4 rounded-2xl h-48 overflow-y-auto space-y-1.5 border border-slate-800 shadow-inner custom-scrollbar">
+                        <p class="text-emerald-400">[LOCAL PC STORAGE READY] IndexedDB storage initialized. All printable documents remain on this PC.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW 5: ADMIN SETTINGS & LABEL CUSTOMIZER  -->
+        <!-- ========================================== -->
+        <section id="view-settings" class="hidden space-y-6">
+            
+            <!-- ADMIN PORTAL HEADING & LABEL EDITOR -->
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80 space-y-6">
+                <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Portal Headings & Labels Customizer</h2>
+                        <p class="text-xs text-slate-400">Edit every title, heading, field name, and badge text shown to customers</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Portal Title -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Main Portal Title</label>
+                        <input type="text" id="cfg-portal-title" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Portal Subtitle -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Portal Subtitle / Description</label>
+                        <input type="text" id="cfg-portal-subtitle" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Office Badge Text -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Office / Printer Status Badge Text</label>
+                        <input type="text" id="cfg-office-badge" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Submit Button Text -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Submit Button Text</label>
+                        <input type="text" id="cfg-submit-btn-text" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Customer Name Label -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Field Label: Customer Name</label>
+                        <input type="text" id="cfg-lbl-cust-name" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Department Label -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Field Label: Department</label>
+                        <input type="text" id="cfg-lbl-cust-dept" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Contact / Ref Label -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Field Label: Mobile / Ref ID</label>
+                        <input type="text" id="cfg-lbl-cust-contact" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Notes Label -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Field Label: Notes / Instructions</label>
+                        <input type="text" id="cfg-lbl-cust-notes" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Success Heading -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Success Screen Title</label>
+                        <input type="text" id="cfg-success-title" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+
+                    <!-- Success Description -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Success Screen Subtitle</label>
+                        <input type="text" id="cfg-success-desc" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:ring-2 focus:ring-red-500 outline-none">
+                    </div>
+                </div>
+
+                <!-- Banner Visibility Toggles -->
+                <div class="pt-4 border-t border-slate-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">Show Local Storage Notice Banner to Customers</p>
+                            <p class="text-[11px] text-slate-400">Toggle off to hide technical storage details from customer interface completely</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cfg-show-storage-notice" class="sr-only peer" onchange="saveAppSettings()">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">Show Office Printer Badge below Title</p>
+                            <p class="text-[11px] text-slate-400">Displays printer badge on customer main screen</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cfg-show-office-badge" checked class="sr-only peer" onchange="saveAppSettings()">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="saveAppSettings()" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Custom Labels & Headings
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Rates, Currency & Pricing Config -->
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80 space-y-6">
+                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                        <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-indian-rupee-sign"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Per-Page Printing Rates (₹ INR)</h2>
+                            <p class="text-xs text-slate-400">Set custom charges in Indian Rupees for customers</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">B&W Rate (₹ / page)</label>
+                                <input type="number" step="0.5" id="cfg-rate-bw" value="2.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Color Rate (₹ / page)</label>
+                                <input type="number" step="0.5" id="cfg-rate-color" value="10.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div>
+                                <p class="text-xs font-bold text-slate-800">Show Price Estimate Box to Customers</p>
+                                <p class="text-[11px] text-slate-400">Displays calculated ₹ amount on customer portal</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="cfg-enable-pricing" checked class="sr-only peer" onchange="saveAppSettings()">
+                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Admin Security PIN -->
+                        <div class="pt-2 border-t border-slate-100 space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Admin Passcode PIN (Security)</label>
+                                <input type="password" id="cfg-admin-pin" placeholder="Leave blank for quick access" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-bold">
+                            </div>
+                        </div>
+
+                        <button onclick="saveAppSettings()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3 rounded-xl text-xs transition shadow-md">
+                            Save Rates & PIN
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Customizer & Mandatory Fields -->
+                <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80 space-y-6">
+                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
+                        <div class="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Form Setup & Mandatory Fields</h2>
+                            <p class="text-xs text-slate-400">Configure customer upload form requirements</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <span class="font-bold text-slate-800">Customer Name</span>
+                                <p class="text-[10px] text-slate-400">Identifies who submitted the document</p>
+                            </div>
+                            <select id="cfg-field-name-req" onchange="saveFormConfig()" class="bg-white border border-slate-300 rounded-lg px-2 py-1 font-bold">
+                                <option value="required">Mandatory (*)</option>
+                                <option value="optional">Optional</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <span class="font-bold text-slate-800">Department</span>
+                                <p class="text-[10px] text-slate-400">Department or category choice</p>
+                            </div>
+                            <select id="cfg-field-dept-req" onchange="saveFormConfig()" class="bg-white border border-slate-300 rounded-lg px-2 py-1 font-bold">
+                                <option value="required">Mandatory (*)</option>
+                                <option value="optional">Optional</option>
+                                <option value="hidden">Hide Field</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <span class="font-bold text-slate-800">Mobile No. / ID Reference</span>
+                                <p class="text-[10px] text-slate-400">Contact number for notification</p>
+                            </div>
+                            <select id="cfg-field-contact-req" onchange="saveFormConfig()" class="bg-white border border-slate-300 rounded-lg px-2 py-1 font-bold">
+                                <option value="optional">Optional</option>
+                                <option value="required">Mandatory (*)</option>
+                                <option value="hidden">Hide Field</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <span class="font-bold text-slate-800">Special Notes / Instructions</span>
+                                <p class="text-[10px] text-slate-400">Custom user notes</p>
+                            </div>
+                            <select id="cfg-field-notes-req" onchange="saveFormConfig()" class="bg-white border border-slate-300 rounded-lg px-2 py-1 font-bold">
+                                <option value="optional">Optional</option>
+                                <option value="required">Mandatory (*)</option>
+                                <option value="hidden">Hide Field</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mobile Connectivity Guide Card -->
+            <div class="bg-gradient-to-r from-navy-900 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-5 border border-slate-800">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center text-2xl border border-blue-500/30">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-extrabold">How Phone Connects to PC (Ethernet / Internet Setup)</h2>
+                            <p class="text-xs text-slate-400">No PC Wi-Fi card needed! Connect via Ethernet router or Free Internet Hosting</p>
+                        </div>
+                    </div>
+                    <span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold px-3 py-1 rounded-full hidden sm:inline-block">Ethernet Friendly</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between text-emerald-400 font-extrabold">
+                            <span>Option 1: Free Netlify / GitHub Hosting (Easiest)</span>
+                            <i class="fa-solid fa-cloud"></i>
+                        </div>
+                        <p class="text-slate-300">Upload this single <code class="text-emerald-400">index.html</code> file to free Netlify, Vercel, or GitHub Pages. Paste your website link below. Mobile phones on 4G/5G/Wi-Fi can scan and print from anywhere!</p>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between text-amber-400 font-extrabold">
+                            <span>Option 2: Internet Tunnel (ngrok)</span>
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                        <p class="text-slate-300">Run <code class="bg-slate-950 text-amber-300 px-1 py-0.5 rounded">ngrok http 8000</code> on PC. Copy the generated internet URL (e.g., <code class="text-emerald-400">https://xyz.ngrok-free.app</code>) into the field below. Works directly over PC Ethernet cable!</p>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between text-blue-400 font-extrabold">
+                            <span>Option 3: Ethernet Cable connected to Wi-Fi Router</span>
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <p class="text-slate-300">If your Ethernet cable plugs into a Wi-Fi router, PC does <strong>NOT</strong> need a Wi-Fi card! Phones on that router's Wi-Fi can open your PC IP (e.g. <code class="text-emerald-400">http://192.168.1.15:8000</code>).</p>
+                    </div>
+                </div>
+
+                <!-- Custom Mobile URL Input -->
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Custom Public Mobile Portal URL (For Printable QR Code)
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-link absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+                            <input type="url" id="cfg-custom-qr-url" placeholder="e.g. https://my-print-shop.netlify.app or https://xyz.ngrok-free.app" class="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono-code text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <button onclick="updateCustomQRUrl()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition whitespace-nowrap">
+                            Update QR Code
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">This URL is embedded into the printable desk QR poster below. When customers scan it on mobile, their phone browser opens this link.</p>
+                </div>
+            </div>
+
+            <!-- Printable QR Poster for Desk/Printer -->
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Office Print Display Poster</h2>
+                            <p class="text-xs text-slate-400">Print and paste near Canon MAXIFY GX6170 printer</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Print QR Poster
+                    </button>
+                </div>
+
+                <div id="printable-poster" class="border-2 border-slate-900 rounded-3xl p-6 text-center space-y-4 bg-gradient-to-b from-slate-50 to-red-50/30">
+                    <h2 id="poster-shop-name" class="text-xl font-black text-slate-900 tracking-tight uppercase">CANON MAXIFY GX6170 PRINT PORTAL</h2>
+                    <div class="inline-block bg-red-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest">
+                        Scan QR Code to Print Documents
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded-2xl inline-block shadow-md border border-slate-200">
+                        <div id="qrcode-container" class="flex justify-center"></div>
+                    </div>
+
+                    <p id="qr-target-url-display" class="text-[11px] font-mono-code text-slate-500 font-medium">Target URL: Auto-detecting...</p>
+
+                    <div class="text-xs text-slate-600 space-y-1 font-medium">
+                        <p class="font-bold text-slate-800">Touchless Document Printing</p>
+                        <p>1. Scan QR code on mobile camera</p>
+                        <p>2. Upload PDF or Image document</p>
+                        <p>3. Files are stored locally on PC & sent to Canon GX6170 USB</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <i class="fa-solid fa-file-lines text-red-400 text-2xl flex-shrink-0"></i>
+                    <div class="truncate">
+                        <h3 id="modal-file-title" class="text-sm font-bold truncate">Document Preview</h3>
+                        <p id="modal-file-meta" class="text-xs text-slate-400 truncate">Customer Preview</p>
+                    </div>
+                </div>
+                <button onclick="closePreviewModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-grow p-4 overflow-y-auto bg-slate-100 flex items-center justify-center custom-scrollbar">
+                <div id="preview-content-box" class="max-w-full text-center">
+                    <!-- Dynamic Preview -->
+                </div>
+            </div>
+
+            <div id="modal-actions-bar" class="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
+                <!-- Action Buttons Injected Dynamically -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Rejection Reason Modal -->
+    <div id="reject-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center space-x-3 text-red-600">
+                <i class="fa-solid fa-circle-exclamation text-2xl"></i>
+                <h3 class="text-lg font-black text-slate-900">Decline Request</h3>
+            </div>
+            <p class="text-xs text-slate-500">Provide a reason for declining this request.</p>
+            
+            <input type="text" id="reject-reason-input" placeholder="e.g. Unclear formatting / Document invalid" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium outline-none focus:ring-2 focus:ring-red-500">
+
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button onclick="closeRejectModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">Cancel</button>
+                <button onclick="confirmRejectJob()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold">Confirm Decline</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Global Application State
+        const STATE = {
+            currentView: 'customer',
+            queue: [],
+            selectedFile: null,
+            selectedFilePages: 1,
+            selectedFileSizeMB: 0,
+            selectedFilePreviewUrl: null,
+            filter: 'all',
+            enablePricing: true,
+            showStorageNotice: false,
+            showOfficeBadge: true,
+            adminPin: '',
+            customQrUrl: '',
+            rates: {
+                bw: 2.00,    // INR ₹
+                color: 10.00 // INR ₹
+            },
+            formConfig: {
+                nameReq: 'required',
+                deptReq: 'required',
+                contactReq: 'optional',
+                notesReq: 'optional'
+            },
+            labels: {
+                portalTitle: 'Canon MAXIFY GX6170 Print Portal',
+                portalSubtitle: 'Submit your documents for printing seamlessly.',
+                officeBadge: 'Office Connected: Canon MAXIFY GX6170',
+                custNameLabel: 'Customer / User Name',
+                custDeptLabel: 'Department',
+                custContactLabel: 'Mobile Number / Reference ID',
+                custNotesLabel: 'Special Instructions / Notes',
+                submitBtn: 'Send to Print Queue',
+                successTitle: 'Document Queued Successfully!',
+                successDesc: 'Your request has been submitted to the print manager desk.'
+            },
+            activeRejectJobId: null
+        };
+
+        // IndexedDB Manager for local PC file persistence
+        let db;
+        const DB_NAME = 'CanonPrintQueueDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'printJobs';
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('IndexedDB Error:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        async function saveJobToIndexedDB(job) {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(job);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function getAllJobsFromIndexedDB() {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function deleteJobFromIndexedDB(id) {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function clearFinishedJobsFromIndexedDB() {
+            if (!db) await initIndexedDB();
+            const all = await getAllJobsFromIndexedDB();
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            all.forEach(job => {
+                if (job.status === 'completed' || job.status === 'rejected') {
+                    store.delete(job.id);
+                }
+            });
+        }
+
+        // Initialize PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+
+        // Cross-tab Synchronization Channel
+        const syncChannel = new BroadcastChannel('canon_gx6170_printflow');
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initIndexedDB();
+                STATE.queue = await getAllJobsFromIndexedDB();
+            } catch (err) {
+                console.warn('Fallback to LocalStorage if IndexedDB fails', err);
+            }
+
+            checkProtocolWarning();
+            loadSavedConfig();
+            applyFormConfigUI();
+            applyCustomLabels();
+            generateQRCode();
+            updateDashboardStats();
+            renderQueueCards();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'admin') {
+                switchView('admin');
+            } else {
+                switchView('customer');
+            }
+
+            syncChannel.onmessage = async (event) => {
+                if (event.data && event.data.type === 'QUEUE_UPDATED') {
+                    STATE.queue = await getAllJobsFromIndexedDB();
+                    renderQueueCards();
+                    updateDashboardStats();
+                }
+            };
+        });
+
+        function checkProtocolWarning() {
+            if (window.location.protocol === 'file:') {
+                const warnEl = document.getElementById('file-protocol-warning');
+                if (warnEl) warnEl.classList.remove('hidden');
+            }
+        }
+
+        function saveStateToLocalStorage() {
+            localStorage.setItem('canon_gx6170_config', JSON.stringify({
+                labels: STATE.labels,
+                enablePricing: STATE.enablePricing,
+                showStorageNotice: STATE.showStorageNotice,
+                showOfficeBadge: STATE.showOfficeBadge,
+                adminPin: STATE.adminPin,
+                customQrUrl: STATE.customQrUrl,
+                rates: STATE.rates,
+                formConfig: STATE.formConfig
+            }));
+        }
+
+        function loadSavedConfig() {
+            const savedConfig = localStorage.getItem('canon_gx6170_config');
+            
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                if (config.labels) STATE.labels = { ...STATE.labels, ...config.labels };
+                if (config.rates) STATE.rates = { ...STATE.rates, ...config.rates };
+                if (config.formConfig) STATE.formConfig = { ...STATE.formConfig, ...config.formConfig };
+                STATE.enablePricing = config.enablePricing !== undefined ? config.enablePricing : true;
+                STATE.showStorageNotice = config.showStorageNotice !== undefined ? config.showStorageNotice : false;
+                STATE.showOfficeBadge = config.showOfficeBadge !== undefined ? config.showOfficeBadge : true;
+                STATE.adminPin = config.adminPin || '';
+                STATE.customQrUrl = config.customQrUrl || '';
+            }
+
+            // Populate Admin Settings inputs
+            document.getElementById('cfg-portal-title').value = STATE.labels.portalTitle;
+            document.getElementById('cfg-portal-subtitle').value = STATE.labels.portalSubtitle;
+            document.getElementById('cfg-office-badge').value = STATE.labels.officeBadge;
+            document.getElementById('cfg-submit-btn-text').value = STATE.labels.submitBtn;
+            document.getElementById('cfg-lbl-cust-name').value = STATE.labels.custNameLabel;
+            document.getElementById('cfg-lbl-cust-dept').value = STATE.labels.custDeptLabel;
+            document.getElementById('cfg-lbl-cust-contact').value = STATE.labels.custContactLabel;
+            document.getElementById('cfg-lbl-cust-notes').value = STATE.labels.custNotesLabel;
+            document.getElementById('cfg-success-title').value = STATE.labels.successTitle;
+            document.getElementById('cfg-success-desc').value = STATE.labels.successDesc;
+
+            document.getElementById('cfg-show-storage-notice').checked = STATE.showStorageNotice;
+            document.getElementById('cfg-show-office-badge').checked = STATE.showOfficeBadge;
+
+            document.getElementById('cfg-rate-bw').value = STATE.rates.bw;
+            document.getElementById('cfg-rate-color').value = STATE.rates.color;
+            document.getElementById('cfg-enable-pricing').checked = STATE.enablePricing;
+            document.getElementById('cfg-admin-pin').value = STATE.adminPin;
+            document.getElementById('cfg-custom-qr-url').value = STATE.customQrUrl;
+
+            document.getElementById('cfg-field-name-req').value = STATE.formConfig.nameReq || 'required';
+            document.getElementById('cfg-field-dept-req').value = STATE.formConfig.deptReq || 'required';
+            document.getElementById('cfg-field-contact-req').value = STATE.formConfig.contactReq || 'optional';
+            document.getElementById('cfg-field-notes-req').value = STATE.formConfig.notesReq || 'optional';
+
+            togglePricingVisibility();
+        }
+
+        function updateCustomQRUrl() {
+            const val = document.getElementById('cfg-custom-qr-url').value.trim();
+            STATE.customQrUrl = val;
+            saveStateToLocalStorage();
+            generateQRCode();
+            showToast('QR Code updated for mobile scanning!', 'success');
+        }
+
+        function applyFormConfigUI() {
+            const deptGroup = document.getElementById('field-group-dept');
+            const contactGroup = document.getElementById('field-group-contact');
+            const notesGroup = document.getElementById('field-group-notes');
+
+            // Name
+            const custName = document.getElementById('cust-name');
+            if (STATE.formConfig.nameReq === 'required') {
+                custName.required = true;
+                document.getElementById('req-star-name').classList.remove('hidden');
+            } else {
+                custName.required = false;
+                document.getElementById('req-star-name').classList.add('hidden');
+            }
+
+            // Dept
+            const custDept = document.getElementById('cust-department');
+            if (STATE.formConfig.deptReq === 'hidden') {
+                deptGroup.classList.add('hidden');
+                custDept.required = false;
+            } else {
+                deptGroup.classList.remove('hidden');
+                custDept.required = (STATE.formConfig.deptReq === 'required');
+                if (STATE.formConfig.deptReq === 'required') document.getElementById('req-star-dept').classList.remove('hidden');
+                else document.getElementById('req-star-dept').classList.add('hidden');
+            }
+
+            // Contact / Phone
+            const custPhone = document.getElementById('cust-phone');
+            if (STATE.formConfig.contactReq === 'hidden') {
+                contactGroup.classList.add('hidden');
+                custPhone.required = false;
+            } else {
+                contactGroup.classList.remove('hidden');
+                custPhone.required = (STATE.formConfig.contactReq === 'required');
+                if (STATE.formConfig.contactReq === 'required') document.getElementById('req-star-contact').classList.remove('hidden');
+                else document.getElementById('req-star-contact').classList.add('hidden');
+            }
+
+            // Notes
+            const printNotes = document.getElementById('print-notes');
+            if (STATE.formConfig.notesReq === 'hidden') {
+                notesGroup.classList.add('hidden');
+                printNotes.required = false;
+            } else {
+                notesGroup.classList.remove('hidden');
+                printNotes.required = (STATE.formConfig.notesReq === 'required');
+                if (STATE.formConfig.notesReq === 'required') document.getElementById('req-star-notes').classList.remove('hidden');
+                else document.getElementById('req-star-notes').classList.add('hidden');
+            }
+        }
+
+        function saveFormConfig() {
+            STATE.formConfig.nameReq = document.getElementById('cfg-field-name-req').value;
+            STATE.formConfig.deptReq = document.getElementById('cfg-field-dept-req').value;
+            STATE.formConfig.contactReq = document.getElementById('cfg-field-contact-req').value;
+            STATE.formConfig.notesReq = document.getElementById('cfg-field-notes-req').value;
+
+            applyFormConfigUI();
+            saveStateToLocalStorage();
+            showToast('Form mandatory fields updated!', 'success');
+        }
+
+        function applyCustomLabels() {
+            document.getElementById('lbl-portal-title').innerText = STATE.labels.portalTitle;
+            document.getElementById('lbl-portal-subtitle').innerText = STATE.labels.portalSubtitle;
+            document.getElementById('lbl-office-badge').innerText = STATE.labels.officeBadge;
+            document.getElementById('lbl-submit-btn').innerText = STATE.labels.submitBtn;
+            document.getElementById('lbl-cust-name-heading').innerText = STATE.labels.custNameLabel;
+            document.getElementById('lbl-cust-dept-heading').innerText = STATE.labels.custDeptLabel;
+            document.getElementById('lbl-cust-contact-heading').innerText = STATE.labels.custContactLabel;
+            document.getElementById('lbl-cust-notes-heading').innerText = STATE.labels.custNotesLabel;
+            document.getElementById('lbl-success-title').innerText = STATE.labels.successTitle;
+            document.getElementById('lbl-success-desc').innerText = STATE.labels.successDesc;
+            
+            document.getElementById('app-window-title').innerText = STATE.labels.portalTitle;
+            document.getElementById('nav-header-title').innerText = STATE.labels.portalTitle;
+            document.getElementById('poster-shop-name').innerText = STATE.labels.portalTitle.toUpperCase();
+
+            // Toggle storage banner
+            const storageBanner = document.getElementById('customer-storage-banner');
+            if (STATE.showStorageNotice) {
+                storageBanner.classList.remove('hidden');
+            } else {
+                storageBanner.classList.add('hidden');
+            }
+
+            // Toggle office badge
+            const badgeContainer = document.getElementById('badge-office-status-container');
+            if (STATE.showOfficeBadge) {
+                badgeContainer.classList.remove('hidden');
+            } else {
+                badgeContainer.classList.add('hidden');
+            }
+        }
+
+        function togglePricingVisibility() {
+            const priceBox = document.getElementById('price-summary-box');
+            if (STATE.enablePricing) {
+                priceBox.classList.remove('hidden');
+            } else {
+                priceBox.classList.add('hidden');
+            }
+        }
+
+        function switchView(viewName) {
+            STATE.currentView = viewName;
+
+            const adminNavbar = document.getElementById('admin-navbar');
+            if (viewName === 'customer') {
+                adminNavbar.classList.add('hidden');
+            } else {
+                adminNavbar.classList.remove('hidden');
+            }
+
+            ['customer', 'admin', 'analytics', 'pc-bridge', 'settings'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add('hidden');
+                
+                const tabBtn = document.getElementById(`tab-${v}`);
+                if (tabBtn) {
+                    tabBtn.classList.remove('bg-red-600', 'text-white', 'shadow-md');
+                    tabBtn.classList.add('text-slate-300');
+                }
+            });
+
+            const activeView = document.getElementById(`view-${viewName}`);
+            if (activeView) activeView.classList.remove('hidden');
+
+            const activeTab = document.getElementById(`tab-${viewName}`);
+            if (activeTab) {
+                activeTab.classList.add('bg-red-600', 'text-white', 'shadow-md');
+                activeTab.classList.remove('text-slate-300');
+            }
+
+            if (viewName === 'analytics') {
+                renderAnalytics();
+            } else if (viewName === 'settings') {
+                generateQRCode();
+            }
+        }
+
+        function promptAdminLogin() {
+            if (STATE.adminPin && STATE.adminPin.trim() !== '') {
+                const input = prompt('Enter Admin Passcode PIN:');
+                if (input === STATE.adminPin) {
+                    switchView('admin');
+                    showToast('Admin Access Granted', 'success');
+                } else if (input !== null) {
+                    showToast('Incorrect Passcode PIN!', 'error');
+                }
+            } else {
+                switchView('admin');
+            }
+        }
+
+        async function handleFileSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            STATE.selectedFile = file;
+            STATE.selectedFileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+            document.getElementById('file-name').innerText = file.name;
+            document.getElementById('dropzone-prompt').classList.add('hidden');
+            document.getElementById('dropzone-selected').classList.remove('hidden');
+
+            const previewContainer = document.getElementById('file-thumbnail-preview');
+
+            if (file.type.includes('pdf')) {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    STATE.selectedFilePages = pdf.numPages;
+                    document.getElementById('file-meta').innerText = `${STATE.selectedFileSizeMB} MB • ${pdf.numPages} Page(s) PDF`;
+
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 0.2 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    previewContainer.innerHTML = '';
+                    previewContainer.appendChild(canvas);
+                    STATE.selectedFilePreviewUrl = canvas.toDataURL();
+                } catch (e) {
+                    STATE.selectedFilePages = 1;
+                    document.getElementById('file-meta').innerText = `${STATE.selectedFileSizeMB} MB • PDF Document`;
+                    previewContainer.innerHTML = `<i class="fa-solid fa-file-pdf text-red-500 text-xl"></i>`;
+                }
+            } else if (file.type.includes('image')) {
+                STATE.selectedFilePages = 1;
+                document.getElementById('file-meta').innerText = `${STATE.selectedFileSizeMB} MB • Image`;
+                const url = URL.createObjectURL(file);
+                STATE.selectedFilePreviewUrl = url;
+                previewContainer.innerHTML = `<img src="${url}" class="w-full h-full object-cover"/>`;
+            } else {
+                STATE.selectedFilePages = 1;
+                document.getElementById('file-meta').innerText = `${STATE.selectedFileSizeMB} MB • Document`;
+                previewContainer.innerHTML = `<i class="fa-solid fa-file-word text-blue-500 text-xl"></i>`;
+            }
+
+            calculateEstimatedCost();
+        }
+
+        function resetSelectedFile() {
+            STATE.selectedFile = null;
+            STATE.selectedFilePages = 1;
+            STATE.selectedFilePreviewUrl = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('dropzone-prompt').classList.remove('hidden');
+            document.getElementById('dropzone-selected').classList.add('hidden');
+            calculateEstimatedCost();
+        }
+
+        function adjustCopies(delta) {
+            const input = document.getElementById('print-copies');
+            let val = parseInt(input.value) || 1;
+            val = Math.max(1, Math.min(100, val + delta));
+            input.value = val;
+            calculateEstimatedCost();
+        }
+
+        function calculateEstimatedCost() {
+            const copies = parseInt(document.getElementById('print-copies').value) || 1;
+            let pages = STATE.selectedFilePages || 1;
+
+            const isColor = document.getElementById('print-color').value === 'color';
+            const rate = isColor ? STATE.rates.color : STATE.rates.bw;
+            const total = pages * copies * rate;
+
+            document.getElementById('estimated-price-display').innerText = `₹${total.toFixed(2)}`;
+            document.getElementById('cost-breakdown-text').innerText = `${pages} page(s) × ${copies} copy (${isColor ? 'Color @ ₹' + STATE.rates.color : 'B&W @ ₹' + STATE.rates.bw}/pg)`;
+            return total;
+        }
+
+        function handleCustomerSubmit(e) {
+            e.preventDefault();
+
+            if (!STATE.selectedFile) {
+                showToast('Please select a document to upload!', 'error');
+                return;
+            }
+
+            const refCode = '#OFF-' + Math.floor(1000 + Math.random() * 9000);
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const newJob = {
+                    id: 'job_' + Date.now(),
+                    refCode: refCode,
+                    customerName: document.getElementById('cust-name').value.trim() || 'Anonymous User',
+                    department: document.getElementById('cust-department').value || 'General',
+                    customerPhone: document.getElementById('cust-phone').value.trim() || 'N/A',
+                    fileName: STATE.selectedFile.name,
+                    fileDataUrl: evt.target.result,
+                    previewUrl: STATE.selectedFilePreviewUrl,
+                    fileType: STATE.selectedFile.type,
+                    fileSizeMB: STATE.selectedFileSizeMB,
+                    pages: STATE.selectedFilePages,
+                    copies: parseInt(document.getElementById('print-copies').value) || 1,
+                    pageRange: document.getElementById('print-page-range').value.trim() || 'All',
+                    colorMode: document.getElementById('print-color').value,
+                    duplex: document.getElementById('print-duplex').value,
+                    paperSize: document.getElementById('print-paper').value,
+                    orientation: document.getElementById('print-orientation').value,
+                    notes: document.getElementById('print-notes').value.trim(),
+                    cost: calculateEstimatedCost(),
+                    status: 'pending',
+                    rejectionReason: '',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+
+                // Save into IndexedDB on local PC
+                await saveJobToIndexedDB(newJob);
+                STATE.queue = await getAllJobsFromIndexedDB();
+
+                broadcastQueueUpdate();
+
+                document.getElementById('customer-upload-form').classList.add('hidden');
+                document.getElementById('customer-success-card').classList.remove('hidden');
+                document.getElementById('customer-ref-code').innerText = refCode;
+
+                renderQueueCards();
+                updateDashboardStats();
+                showToast('Document saved & sent to queue!', 'success');
+                logTerminal(`[FILE SAVED TO PC] ${newJob.fileName} stored in local IndexedDB database.`);
+            };
+
+            reader.readAsDataURL(STATE.selectedFile);
+        }
+
+        function resetCustomerForm() {
+            document.getElementById('customer-upload-form').reset();
+            resetSelectedFile();
+            document.getElementById('customer-upload-form').classList.remove('hidden');
+            document.getElementById('customer-success-card').classList.add('hidden');
+        }
+
+        function renderQueueCards() {
+            const container = document.getElementById('queue-cards-container');
+            const emptyMsg = document.getElementById('empty-queue-msg');
+            const searchQuery = document.getElementById('queue-search-input').value.toLowerCase().trim();
+            container.innerHTML = '';
+
+            const filteredJobs = STATE.queue.filter(j => {
+                const matchesFilter = (STATE.filter === 'all') || (j.status === STATE.filter);
+                const matchesSearch = !searchQuery || 
+                    j.customerName.toLowerCase().includes(searchQuery) ||
+                    j.refCode.toLowerCase().includes(searchQuery) ||
+                    j.fileName.toLowerCase().includes(searchQuery) ||
+                    j.department.toLowerCase().includes(searchQuery);
+
+                return matchesFilter && matchesSearch;
+            });
+
+            if (filteredJobs.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                return;
+            } else {
+                emptyMsg.classList.add('hidden');
+            }
+
+            filteredJobs.forEach(job => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition flex flex-col justify-between overflow-hidden group";
+                
+                let statusBadge = '';
+                if (job.status === 'pending') statusBadge = `<span class="bg-amber-100 text-amber-800 font-extrabold px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1"><i class="fa-solid fa-clock"></i> Pending</span>`;
+                else if (job.status === 'approved') statusBadge = `<span class="bg-emerald-100 text-emerald-800 font-extrabold px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Approved for Canon USB</span>`;
+                else if (job.status === 'completed') statusBadge = `<span class="bg-slate-800 text-white font-extrabold px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1"><i class="fa-solid fa-check-double"></i> Printed</span>`;
+                else statusBadge = `<span class="bg-red-100 text-red-800 font-extrabold px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1"><i class="fa-solid fa-xmark"></i> Declined</span>`;
+
+                card.innerHTML = `
+                    <div class="p-5 space-y-3.5">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono-code text-xs font-black text-slate-400">${job.refCode}</span>
+                            ${statusBadge}
+                        </div>
+
+                        <div class="flex items-start space-x-3">
+                            <div class="w-11 h-11 bg-slate-100 rounded-2xl flex items-center justify-center text-red-600 flex-shrink-0 overflow-hidden border border-slate-200">
+                                ${job.previewUrl ? `<img src="${job.previewUrl}" class="w-full h-full object-cover"/>` : `<i class="fa-solid ${job.fileType.includes('pdf') ? 'fa-file-pdf text-red-500' : 'fa-file-lines text-blue-500'} text-xl"></i>`}
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm truncate">${job.customerName}</h4>
+                                <p class="text-[11px] font-semibold text-emerald-700 truncate">${job.department}</p>
+                                <p class="text-xs text-slate-400 truncate mt-0.5">${job.fileName}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px] bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <div><span class="text-slate-400 font-medium">Output:</span> <strong>${job.pages} pgs x ${job.copies}</strong></div>
+                            <div><span class="text-slate-400 font-medium">Color:</span> <strong>${job.colorMode === 'color' ? '🎨 Color' : '⚫ B&W'}</strong></div>
+                            <div><span class="text-slate-400 font-medium">Charge:</span> <strong class="text-emerald-700">₹${job.cost.toFixed(2)}</strong></div>
+                            <div><span class="text-slate-400 font-medium">Storage:</span> <strong class="text-indigo-600">Local PC</strong></div>
+                        </div>
+
+                        ${job.notes ? `<p class="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-100/80"><strong>Note:</strong> ${job.notes}</p>` : ''}
+                        ${job.rejectionReason ? `<p class="text-xs text-red-800 bg-red-50 p-2.5 rounded-xl border border-red-100"><strong>Declined Reason:</strong> ${job.rejectionReason}</p>` : ''}
+                    </div>
+
+                    <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block uppercase font-bold">Target Printer</span>
+                            <span class="text-xs font-bold text-slate-700">Canon GX6170 USB</span>
+                        </div>
+
+                        <div class="flex items-center space-x-1.5">
+                            <button onclick="openPreviewModal('${job.id}')" title="Preview / Download Local File" class="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 transition">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+
+                            ${job.status === 'pending' ? `
+                                <button onclick="updateJobStatus('${job.id}', 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> Approve & Print
+                                </button>
+                                <button onclick="promptRejectModal('${job.id}')" class="px-2 py-1.5 bg-slate-200 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold text-slate-600 transition">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            ` : ''}
+
+                            ${job.status === 'approved' ? `
+                                <button onclick="updateJobStatus('${job.id}', 'completed')" class="px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition">
+                                    Mark Printed
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        async function updateJobStatus(jobId, newStatus) {
+            const job = STATE.queue.find(j => j.id === jobId);
+            if (job) {
+                job.status = newStatus;
+                await saveJobToIndexedDB(job);
+                STATE.queue = await getAllJobsFromIndexedDB();
+
+                broadcastQueueUpdate();
+                renderQueueCards();
+                updateDashboardStats();
+
+                showToast(`Job ${job.refCode} updated to ${newStatus}`, 'info');
+
+                if (newStatus === 'approved') {
+                    logTerminal(`[PRINT COMMAND] Ref ${job.refCode} (${job.fileName}) -> Spooling to Canon GX6170 via USB.`);
+                }
+            }
+        }
+
+        async function approveAllPending() {
+            const pendingJobs = STATE.queue.filter(j => j.status === 'pending');
+            if (pendingJobs.length === 0) {
+                showToast('No pending jobs to approve!', 'info');
+                return;
+            }
+            for (let j of pendingJobs) {
+                j.status = 'approved';
+                await saveJobToIndexedDB(j);
+            }
+            STATE.queue = await getAllJobsFromIndexedDB();
+            broadcastQueueUpdate();
+            renderQueueCards();
+            updateDashboardStats();
+            showToast(`Approved ${pendingJobs.length} job(s) for local USB printing!`, 'success');
+        }
+
+        function promptRejectModal(jobId) {
+            STATE.activeRejectJobId = jobId;
+            document.getElementById('reject-reason-input').value = '';
+            document.getElementById('reject-modal').classList.remove('hidden');
+        }
+
+        function closeRejectModal() {
+            STATE.activeRejectJobId = null;
+            document.getElementById('reject-modal').classList.add('hidden');
+        }
+
+        async function confirmRejectJob() {
+            if (!STATE.activeRejectJobId) return;
+            const reason = document.getElementById('reject-reason-input').value.trim() || 'Declined by Admin';
+            const job = STATE.queue.find(j => j.id === STATE.activeRejectJobId);
+            if (job) {
+                job.status = 'rejected';
+                job.rejectionReason = reason;
+                await saveJobToIndexedDB(job);
+                STATE.queue = await getAllJobsFromIndexedDB();
+                broadcastQueueUpdate();
+                renderQueueCards();
+                updateDashboardStats();
+                showToast(`Job ${job.refCode} declined`, 'error');
+            }
+            closeRejectModal();
+        }
+
+        function filterQueue(filter) {
+            STATE.filter = filter;
+            document.querySelectorAll('.queue-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white', 'shadow-sm');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-slate-900', 'text-white', 'shadow-sm');
+                activeBtn.classList.remove('bg-slate-100', 'text-slate-600');
+            }
+            renderQueueCards();
+        }
+
+        function updateDashboardStats() {
+            const pending = STATE.queue.filter(j => j.status === 'pending').length;
+            const printed = STATE.queue.filter(j => j.status === 'approved' || j.status === 'completed');
+            const totalRevenue = printed.reduce((sum, j) => sum + j.cost, 0);
+
+            document.getElementById('stat-pending-count').innerText = pending;
+            document.getElementById('stat-printed-count').innerText = printed.length;
+            document.getElementById('stat-revenue').innerText = `₹${totalRevenue.toFixed(2)}`;
+
+            const badge = document.getElementById('pending-count-badge');
+            if (pending > 0) {
+                badge.innerText = pending;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function broadcastQueueUpdate() {
+            syncChannel.postMessage({
+                type: 'QUEUE_UPDATED'
+            });
+        }
+
+        async function connectWebUSBDevice() {
+            if ('usb' in navigator) {
+                try {
+                    const device = await navigator.usb.requestDevice({ filters: [] });
+                    document.getElementById('usb-device-info').innerText = `Paired USB Device: ${device.productName || 'Canon MAXIFY GX6170'} (Vendor ID: ${device.vendorId})`;
+                    showToast('Canon MAXIFY GX6170 WebUSB Paired Successfully!', 'success');
+                    logTerminal(`[WEBUSB PAIRED] Device ${device.productName || 'Canon GX6170'} paired directly with browser.`);
+                } catch (err) {
+                    showToast('USB pairing canceled or unavailable', 'info');
+                }
+            } else {
+                showToast('WebUSB API not supported on browser. Use the Python script to auto-save files to C:\\Canon_Print_Spooler\\', 'error');
+            }
+        }
+
+        function downloadBackgroundScript() {
+            const pythonScript = `# Canon MAXIFY GX6170 Local PC Storage & Print Agent
+# This script runs locally on the Windows PC connected to Canon GX6170.
+# It creates a local PC folder C:\\Canon_Print_Spooler\\ and saves printable files to PC disk.
+
+import os
+import time
+import base64
+
+SPOOL_DIR = r"C:\\Canon_Print_Spooler"
+PRINTER_NAME = "Canon MAXIFY GX6170"
+
+if not os.path.exists(SPOOL_DIR):
+    os.makedirs(SPOOL_DIR)
+    print(f"[+] Created Local PC Folder: {SPOOL_DIR}")
+
+print(f"[*] Canon GX6170 Local File Auto-Saver Active.")
+print(f"[*] All printable documents will be saved in: {SPOOL_DIR}")
+
+def save_file_to_pc(filename, base64_content):
+    file_path = os.path.join(SPOOL_DIR, filename)
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(base64_content))
+    print(f"[SUCCESS] Saved to PC Hard Drive: {file_path}")
+
+print("[*] Listening for incoming print files...")
+`;
+            const blob = new Blob([pythonScript], { type: 'text/x-python' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'canon_gx6170_local_pc_saver.py';
+            a.click();
+            showToast('Local PC Auto-Saver Python script downloaded!', 'success');
+        }
+
+        function logTerminal(message) {
+            const term = document.getElementById('terminal-log');
+            if (term) {
+                const p = document.createElement('p');
+                p.innerText = `${new Date().toLocaleTimeString()} ${message}`;
+                term.appendChild(p);
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        function clearTerminalLog() {
+            const term = document.getElementById('terminal-log');
+            if (term) term.innerHTML = `<p class="text-emerald-400">[SYSTEM READY] Log cleared.</p>`;
+        }
+
+        function openPreviewModal(jobId) {
+            const job = STATE.queue.find(j => j.id === jobId);
+            if (!job) return;
+
+            document.getElementById('modal-file-title').innerText = job.fileName;
+            document.getElementById('modal-file-meta').innerText = `Customer: ${job.customerName} (${job.department}) • Ticket: ${job.refCode}`;
+
+            const box = document.getElementById('preview-content-box');
+            if (job.fileType.includes('image')) {
+                box.innerHTML = `<img src="${job.fileDataUrl}" class="max-h-[60vh] rounded-2xl shadow-lg border border-slate-300 mx-auto" />`;
+            } else {
+                box.innerHTML = `
+                    <div class="bg-white p-8 rounded-3xl shadow border text-center space-y-4 max-w-md mx-auto">
+                        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-3xl">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div>
+                            <p class="font-extrabold text-slate-900 text-base">${job.fileName}</p>
+                            <p class="text-xs text-slate-400 mt-1">${job.pages} Page(s) • ${job.fileSizeMB} MB</p>
+                            <span class="inline-block mt-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full">Stored on PC IndexedDB</span>
+                        </div>
+                        <a href="${job.fileDataUrl}" download="${job.fileName}" class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-md">
+                            <i class="fa-solid fa-download"></i> Save Copy to PC Downloads Folder
+                        </a>
+                    </div>
+                `;
+            }
+
+            const actionsBar = document.getElementById('modal-actions-bar');
+            actionsBar.innerHTML = `
+                <div class="text-xs font-bold text-slate-700">Calculated Charge: <span class="text-emerald-700">₹${job.cost.toFixed(2)}</span></div>
+                <div class="flex space-x-2">
+                    <button onclick="closePreviewModal()" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">Close</button>
+                    ${job.status === 'pending' ? `
+                        <button onclick="updateJobStatus('${job.id}', 'approved'); closePreviewModal();" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-md">
+                            Approve & Print via USB
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+
+            document.getElementById('preview-modal').classList.remove('hidden');
+        }
+
+        function closePreviewModal() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        }
+
+        function renderAnalytics() {
+            const depts = {};
+            let totalBwPages = 0;
+            let totalColorPages = 0;
+            let totalBwRev = 0;
+            let totalColorRev = 0;
+
+            STATE.queue.forEach(job => {
+                if (job.status === 'approved' || job.status === 'completed') {
+                    const dept = job.department || 'General';
+                    const jobPages = job.pages * job.copies;
+                    depts[dept] = (depts[dept] || 0) + jobPages;
+
+                    if (job.colorMode === 'color') {
+                        totalColorPages += jobPages;
+                        totalColorRev += job.cost;
+                    } else {
+                        totalBwPages += jobPages;
+                        totalBwRev += job.cost;
+                    }
+                }
+            });
+
+            const deptContainer = document.getElementById('analytics-dept-bars');
+            deptContainer.innerHTML = '';
+
+            const totalPages = totalBwPages + totalColorPages;
+
+            if (Object.keys(depts).length === 0) {
+                deptContainer.innerHTML = `<p class="text-xs text-slate-400 italic">No printed document statistics yet.</p>`;
+            } else {
+                Object.entries(depts).forEach(([deptName, pgs]) => {
+                    const pct = totalPages > 0 ? Math.round((pgs / totalPages) * 100) : 0;
+                    const row = document.createElement('div');
+                    row.innerHTML = `
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-800">${deptName}</span>
+                            <span class="text-slate-600">${pgs} pgs (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+                            <div class="bg-red-600 h-full transition-all duration-500" style="width: ${pct}%"></div>
+                        </div>
+                    `;
+                    deptContainer.appendChild(row);
+                });
+            }
+
+            document.getElementById('analytics-bw-val').innerText = `${totalBwPages} pgs`;
+            document.getElementById('analytics-bw-bar').style.width = `${totalPages > 0 ? (totalBwPages / totalPages) * 100 : 0}%`;
+
+            document.getElementById('analytics-color-val').innerText = `${totalColorPages} pgs`;
+            document.getElementById('analytics-color-bar').style.width = `${totalPages > 0 ? (totalColorPages / totalPages) * 100 : 0}%`;
+
+            document.getElementById('analytics-bw-rev').innerText = `₹${totalBwRev.toFixed(2)}`;
+            document.getElementById('analytics-color-rev').innerText = `₹${totalColorRev.toFixed(2)}`;
+            document.getElementById('analytics-total-rev').innerText = `₹${(totalBwRev + totalColorRev).toFixed(2)}`;
+        }
+
+        function exportAuditLogCSV() {
+            if (STATE.queue.length === 0) {
+                showToast('No job history to export!', 'info');
+                return;
+            }
+
+            let csv = "Job ID,Ref Code,Customer,Department,File Name,Pages,Copies,Color Mode,Cost (INR),Status,Timestamp\n";
+            STATE.queue.forEach(j => {
+                csv += `"${j.id}","${j.refCode}","${j.customerName}","${j.department}","${j.fileName}",${j.pages},${j.copies},"${j.colorMode}",${j.cost},"${j.status}","${j.timestamp}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `canon_gx6170_audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showToast('Audit log CSV downloaded', 'success');
+        }
+
+        function generateQRCode() {
+            const container = document.getElementById('qrcode-container');
+            const displayUrlLabel = document.getElementById('qr-target-url-display');
+            container.innerHTML = '';
+            
+            let targetUrl = STATE.customQrUrl && STATE.customQrUrl.trim() !== '' 
+                ? STATE.customQrUrl 
+                : window.location.href.split('?')[0];
+
+            if (targetUrl.startsWith('file://')) {
+                displayUrlLabel.innerHTML = `<span class="text-amber-600 font-bold">⚠️ Notice: Currently file:// link. Enter a public Netlify / ngrok / Router URL in settings above.</span>`;
+            } else {
+                displayUrlLabel.innerHTML = `Target Mobile Link: <a href="${targetUrl}" target="_blank" class="text-emerald-600 font-bold underline">${targetUrl}</a>`;
+            }
+
+            new QRCode(container, {
+                text: targetUrl,
+                width: 160,
+                height: 160,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        function saveAppSettings() {
+            STATE.labels.portalTitle = document.getElementById('cfg-portal-title').value.trim() || 'Canon MAXIFY GX6170 Print Portal';
+            STATE.labels.portalSubtitle = document.getElementById('cfg-portal-subtitle').value.trim();
+            STATE.labels.officeBadge = document.getElementById('cfg-office-badge').value.trim();
+            STATE.labels.submitBtn = document.getElementById('cfg-submit-btn-text').value.trim() || 'Send to Print Queue';
+            STATE.labels.custNameLabel = document.getElementById('cfg-lbl-cust-name').value.trim() || 'Customer / User Name';
+            STATE.labels.custDeptLabel = document.getElementById('cfg-lbl-cust-dept').value.trim() || 'Department';
+            STATE.labels.custContactLabel = document.getElementById('cfg-lbl-cust-contact').value.trim() || 'Mobile Number / Reference ID';
+            STATE.labels.custNotesLabel = document.getElementById('cfg-lbl-cust-notes').value.trim() || 'Special Instructions / Notes';
+            STATE.labels.successTitle = document.getElementById('cfg-success-title').value.trim() || 'Document Queued Successfully!';
+            STATE.labels.successDesc = document.getElementById('cfg-success-desc').value.trim();
+
+            STATE.showStorageNotice = document.getElementById('cfg-show-storage-notice').checked;
+            STATE.showOfficeBadge = document.getElementById('cfg-show-office-badge').checked;
+
+            STATE.rates.bw = parseFloat(document.getElementById('cfg-rate-bw').value) || 2.00;
+            STATE.rates.color = parseFloat(document.getElementById('cfg-rate-color').value) || 10.00;
+            STATE.enablePricing = document.getElementById('cfg-enable-pricing').checked;
+            STATE.adminPin = document.getElementById('cfg-admin-pin').value.trim();
+
+            applyCustomLabels();
+            togglePricingVisibility();
+            saveStateToLocalStorage();
+            showToast('Portal custom titles, labels, and settings saved!', 'success');
+        }
+
+        async function triggerDemoJob() {
+            const demoJobs = [
+                { name: 'Amit Verma', dept: 'Sales & Marketing', file: 'Invoices_Batch_2026.pdf', pages: 8 },
+                { name: 'Priya Sundaram', dept: 'Accounts', file: 'GST_Filing_Report.pdf', pages: 4 },
+                { name: 'Vikram Mehta', dept: 'General', file: 'Property_Agreement_Draft.pdf', pages: 15 }
+            ];
+            const sample = demoJobs[Math.floor(Math.random() * demoJobs.length)];
+            const newJob = {
+                id: 'job_' + Date.now(),
+                refCode: '#OFF-' + Math.floor(1000 + Math.random() * 9000),
+                customerName: sample.name,
+                department: sample.dept,
+                customerPhone: '+91 98765 ' + Math.floor(10000 + Math.random() * 90000),
+                fileName: sample.file,
+                fileDataUrl: '',
+                previewUrl: null,
+                fileType: 'application/pdf',
+                fileSizeMB: '1.8',
+                pages: sample.pages,
+                copies: 1,
+                pageRange: 'All',
+                colorMode: 'bw',
+                duplex: 'double',
+                paperSize: 'A4',
+                orientation: 'portrait',
+                notes: 'Please print on A4',
+                cost: sample.pages * STATE.rates.bw,
+                status: 'pending',
+                rejectionReason: '',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            await saveJobToIndexedDB(newJob);
+            STATE.queue = await getAllJobsFromIndexedDB();
+            broadcastQueueUpdate();
+            renderQueueCards();
+            updateDashboardStats();
+            showToast('Demo request saved to PC storage & queued', 'info');
+        }
+
+        async function clearCompletedJobs() {
+            await clearFinishedJobsFromIndexedDB();
+            STATE.queue = await getAllJobsFromIndexedDB();
+            broadcastQueueUpdate();
+            renderQueueCards();
+            updateDashboardStats();
+            showToast('Cleared finished and declined jobs from PC database', 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-slate-900 text-white';
+            if (type === 'success') bg = 'bg-emerald-600 text-white';
+            if (type === 'error') bg = 'bg-red-600 text-white';
+
+            toast.className = `${bg} px-4 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center space-x-2 transition-all transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info'}"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
